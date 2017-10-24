@@ -31,21 +31,21 @@ void a_all_pids()
 	int i = 0;
 	char name[256];
 	if (d) {
-	 		while ((dir = readdir(d)) != NULL) {
-					strcpy(name, dir->d_name);
-					while (i<strlen(name)){
-							if(name[i] > 57 || name[i] < 48){
-									isPID = 0;
-									break;
-							} else
-									isPID = 1;
-							i++;
-					}
-					if (isPID == 1) {
-							printf("%s\n", name);
-					}
-	  		}
-	  closedir(d);
+		while ((dir = readdir(d)) != NULL) {
+			strcpy(name, dir->d_name);
+			while (i<strlen(name)) {
+				if(name[i] > 57 || name[i] < 48) {
+					isPID = 0;
+					break;
+				} else
+					isPID = 1;
+				i++;
+			}
+			if (isPID == 1) {
+				printf("%s\n", name);
+			}
+		}
+		closedir(d);
 	}
 }
 
