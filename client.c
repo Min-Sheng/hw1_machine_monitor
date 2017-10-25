@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 	}
 
 	/* Receive message from the server and print to screen */
-	bzero(buffer, 128);
+	memset(buffer, 0, BUFFER_SIZE);
 	recv(client_socket, buffer, sizeof(buffer), 0);
 	printf("receive from server: %s\n", buffer);
 	send(client_socket,resp,sizeof(resp),0);
