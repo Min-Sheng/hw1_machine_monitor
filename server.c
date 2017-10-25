@@ -7,7 +7,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <netinet/in.h>
-//void *communicate_to_client();
+
 void a_all_pids(int *client_socket);
 void b_tids(int *client_socket, int pid);
 void c_child_pids(int *client_socket, int pid);
@@ -24,11 +24,7 @@ void socket_server();
 
 int main(int argc, char **argv)
 {
-// write someting here...
 	socket_server();
-	//a_all_pids((&ans)[BUFFER_SIZE]);
-	//printf("%d\n", SERVER_PORT);
-	//printf("%d\n", BUFFER_SIZE);
 	return 0;
 }
 
@@ -38,23 +34,22 @@ void socket_server()
 	struct sockaddr_in server_addr;
 	int connection_socket;
 	int ret;
-	char quest[2];
+	char quest[1];
+	int pid[1];
 	int reuseaddr = 1;
 	socklen_t reuseaddr_len;
 
-	/* create sockett */
+	/* Create socket */
 	connection_socket = socket(PF_INET, SOCK_STREAM, 0);
 	if (connection_socket == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	/* initialize structure server_addr */
+	/* Initialize structure server_addr */
 	memset(&server_addr, 0, sizeof(struct sockaddr_in));
-	//bzero(&server_addr, sizeof(server_addr));
 	server_addr.sin_family = AF_INET;
 	server_addr.sin_port = htons(SERVER_PORT);
-	/* this line is different from client */
 	server_addr.sin_addr.s_addr = INADDR_ANY;
 
 	reuseaddr_len = sizeof(reuseaddr);
@@ -70,14 +65,14 @@ void socket_server()
 		exit(EXIT_FAILURE);
 	}
 
-	/* make it listen to socket with max 20 connections */
+	/* Make it listen to socket with max 20 connections */
 	ret = listen(connection_socket, 20);
 	if (ret == -1) {
 		perror("listen");
 		exit(EXIT_FAILURE);
 	}
 
-	/* infinity loop -- accepting connection from client forever */
+	/* Infinity loop -- accepting connection from client forever */
 	while(1) {
 		int client_socket;
 		struct sockaddr_in client_addr;
@@ -93,20 +88,22 @@ void socket_server()
 
 		/* Receive quest from the client*/
 		memset(&quest, 0, 1);
+		memset(pid, 0, 1);
 		recv(client_socket, quest, sizeof(quest), 0);
 
 		if(quest[0] == 'a') {
 			a_all_pids(&client_socket);
 		}
 		if(quest[0] == 'b') {
-			b_tids(&client_socket, 1);
+			recv(client_socket, pid, sizeof(pid), 0);
+			b_tids(&client_socket, pid[0]);
 		}
-		/* close(client) */
+		/* Close(client) */
 		close(client_socket);
 
 	}
 
-	/* close(server) , but never get here because of the loop */
+	/* Close(server) , but never get here because of the loop */
 	close(connection_socket);
 
 }
@@ -142,9 +139,16 @@ void a_all_pids(int *client_socket)
 
 void b_tids(int *client_socket, int pid)
 {
+
 	DIR           *d;
 	struct dirent *dir;
-	d = opendir("/proc/1/task/");
+	char path[BUFFER_SIZE] = "/proc/\0";
+	char pid_path[BUFFER_SIZE];
+	sprintf(pid_path, "%d", pid);
+	strcat(path, pid_path);
+	strcat(path, "/task/");
+	printf("%s", path);
+	d = opendir(path);
 	int isTID = 0;
 	int i = 0, j = 0;
 	char name[BUFFER_SIZE];
