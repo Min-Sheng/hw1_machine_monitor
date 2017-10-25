@@ -3,8 +3,8 @@
 
 struct monitor_protocol {
 // write someting here...
-	#define SERVER_PORT 59487
-	#define BUFFER_SIZE 256
+#define SERVER_PORT 59487
+#define BUFFER_SIZE 256
 };
 
 #endif
