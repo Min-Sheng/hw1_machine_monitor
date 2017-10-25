@@ -12,29 +12,26 @@ void print_ask();
 
 int main(int argc, char **argv)
 {
-// write someting here...
 	struct sockaddr_in client_addr;
 	int client_socket;
 	int ret;
-	char quest[1]="";
+	char quest[1];
+	int pid[1];
 	char ans[BUFFER_SIZE];
-	//char buffer[BUFFER_SIZE];
-	//char resp[10]="clientack";
 
-	/* create socket */
+	/* Create socket */
 	client_socket = socket(PF_INET, SOCK_STREAM, 0);
 	if (client_socket == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	/* initialize value in client_addr */
+	/* Initialize value in client_addr */
 	memset(&client_addr, 0, sizeof(struct sockaddr_in));
-//bzero(&client_addr, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_port = htons(SERVER_PORT);
 	client_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
-//inet_aton("127.0.0.1", &client_addr.sin_addr);
+
 	printf("Linking to server...");
 
 	while(1) {
@@ -56,14 +53,21 @@ int main(int argc, char **argv)
 
 		/*Send quest*/
 		memset(&quest, 0, 1);
+		memset(&pid, 0, 1);
 		if(scanf("%c",&quest[0]) == 1) {
 			if (quest[0] == 'a') {
 				send(client_socket,quest,sizeof(quest),0);
 				printf("\n");
 			} else if (quest[0] == 'b') {
-				send(client_socket,quest,sizeof(quest),0);
-				printf("\n");
-				printf("[tid] ");
+				send(client_socket, quest, sizeof(quest), 0);
+				printf("pid? ");
+				if(scanf("%d",&pid[0]) == 1) {
+					send(client_socket, pid, sizeof(pid), 0);
+					printf("\n");
+					printf("[tid] ");
+				} else {
+					printf("Failed.\n");
+				}
 			}
 		} else {
 			printf("Failed.\n");
@@ -76,7 +80,6 @@ int main(int argc, char **argv)
 			if(res == 0) {
 				break;
 			}
-
 			printf("%s\n", ans);
 		}
 	}
