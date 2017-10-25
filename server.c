@@ -8,17 +8,17 @@
 #include <unistd.h>
 #include <netinet/in.h>
 //void *communicate_to_client();
-void a_all_pids();
-void b_tids(int pid);
-void c_child_pids(int pid);
-void d_process_name(int pid);
-void e_state(int pid);
-void f_cmdline(int pid);
-void g_parent_pid(int pid);
-void h_all_ancients_of_pid(int pid);
-void i_Vmsize(int pid);
-void j_VmRSS(int pid);
-void k_exit();
+void a_all_pids(int *client_socket);
+void b_tids(int *client_socket, int pid);
+void c_child_pids(int *client_socket, int pid);
+void d_process_name(int *client_socket, int pid);
+void e_state(int *client_socket, int pid);
+void f_cmdline(int *client_socket, int pid);
+void g_parent_pid(int *client_socket, int pid);
+void h_all_ancients_of_pid(int *client_socket, int pid);
+void i_Vmsize(int *client_socket, int pid);
+void j_VmRSS(int *client_socket, int pid);
+void k_exit(int *client_socket);
 
 void socket_server();
 
@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 {
 // write someting here...
 	socket_server();
-	//a_all_pids();
+	//a_all_pids((&ans)[BUFFER_SIZE]);
 	//printf("%d\n", SERVER_PORT);
 	//printf("%d\n", BUFFER_SIZE);
 	return 0;
@@ -38,8 +38,7 @@ void socket_server()
 	struct sockaddr_in server_addr;
 	int connection_socket;
 	int ret;
-	char buffer[BUFFER_SIZE] = "Hi client! ";
-	char buffer1[BUFFER_SIZE];
+	char quest[2];
 	int reuseaddr = 1;
 	socklen_t reuseaddr_len;
 
@@ -92,11 +91,16 @@ void socket_server()
 			exit(EXIT_FAILURE);
 		}
 
-		/* Send message */
-		send(client_socket, buffer, sizeof(buffer), 0);
-		int res=recv(client_socket, buffer1, sizeof(buffer1), 0);
-		printf("receive from client: %s, %d bytes\n", buffer1,res);
-		//write(fd, buffer1, sizeof(buffer1));
+		/* Receive quest from the client*/
+		memset(&quest, 0, 1);
+		recv(client_socket, quest, sizeof(quest), 0);
+
+		if(quest[0] == 'a') {
+			a_all_pids(&client_socket);
+		}
+		if(quest[0] == 'b') {
+			b_tids(&client_socket, 1);
+		}
 		/* close(client) */
 		close(client_socket);
 
@@ -107,14 +111,14 @@ void socket_server()
 
 }
 
-void a_all_pids()
+void a_all_pids(int *client_socket)
 {
 	DIR           *d;
 	struct dirent *dir;
-	d = opendir("/proc");
+	d = opendir("/proc/");
 	int isPID = 0;
-	int i = 0;
-	char name[256];
+	int i = 0, j = 0;
+	char name[BUFFER_SIZE];
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -127,7 +131,8 @@ void a_all_pids()
 				i++;
 			}
 			if (isPID == 1) {
-				printf("%s\n", name);
+				send(*client_socket, name, BUFFER_SIZE, 0);
+				j++;
 			}
 		}
 		closedir(d);
@@ -135,3 +140,30 @@ void a_all_pids()
 }
 
 
+void b_tids(int *client_socket, int pid)
+{
+	DIR           *d;
+	struct dirent *dir;
+	d = opendir("/proc/1/task/");
+	int isTID = 0;
+	int i = 0, j = 0;
+	char name[BUFFER_SIZE];
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+			strcpy(name, dir->d_name);
+			while (i<strlen(name)) {
+				if(name[i] > 57 || name[i] < 48) {
+					isTID = 0;
+					break;
+				} else
+					isTID = 1;
+				i++;
+			}
+			if (isTID == 1) {
+				send(*client_socket, name, BUFFER_SIZE, 0);
+				j++;
+			}
+		}
+		closedir(d);
+	}
+}
