@@ -19,6 +19,7 @@ void h_all_ancients_of_pid(int *client_socket, int pid);
 void i_Vmsize(int *client_socket, int pid);
 void j_VmRSS(int *client_socket, int pid);
 void k_exit(int *client_socket);
+void parse_status(int pid, char *substr, char *out);
 
 void socket_server();
 
@@ -64,48 +65,61 @@ void socket_server()
 		perror("bind");
 		exit(EXIT_FAILURE);
 	}
-
-	/* Make it listen to socket with max 20 connections */
-	ret = listen(connection_socket, 20);
-	if (ret == -1) {
-		perror("listen");
-		exit(EXIT_FAILURE);
-	}
-
-	/* Infinity loop -- accepting connection from client forever */
 	while(1) {
+		/* Make it listen to socket with max 20 connections */
+		ret = listen(connection_socket, 20);
+		if (ret == -1) {
+			perror("listen");
+			exit(EXIT_FAILURE);
+		}
+
 		int client_socket;
 		struct sockaddr_in client_addr;
 		socklen_t addrlen = sizeof(client_addr);
-
-		/* Wait and Accept connection */
-		client_socket = accept(connection_socket, (struct sockaddr*)&client_addr,
+		client_socket = accept(connection_socket, (struct sockaddr *)&client_addr,
 		                       (socklen_t *)&addrlen);
+		/* Wait and Accept connection */
 		if (client_socket == -1) {
 			perror("accept");
 			exit(EXIT_FAILURE);
 		}
+		/* Infinity loop -- accepting connection from client forever */
+		while(1) {
 
-		/* Receive quest from the client*/
-		memset(&quest, 0, 1);
-		memset(pid, 0, 1);
-		recv(client_socket, quest, sizeof(quest), 0);
+			/* Receive quest from the client*/
+			memset(&quest, 0, 1);
+			memset(&pid, 0, 1);
+			recv(client_socket, quest, sizeof(quest), 0);
 
-		if(quest[0] == 'a') {
-			a_all_pids(&client_socket);
+			if(quest[0] == 'a') {
+				a_all_pids(&client_socket);
+			} else if(quest[0] == 'b') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				b_tids(&client_socket, pid[0]);
+			} else if(quest[0] == 'd') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				d_process_name(&client_socket, pid[0]);
+			} else if(quest[0] == 'e') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				e_state(&client_socket, pid[0]);
+			} else if(quest[0] == 'g') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				g_parent_pid(&client_socket, pid[0]);
+			} else if(quest[0] == 'i') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				i_Vmsize(&client_socket, pid[0]);
+			} else if(quest[0] == 'j') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				j_VmRSS(&client_socket, pid[0]);
+			} else if(quest[0] == 'k') {
+				/* Close(client) */
+				close(client_socket);
+				break;
+			}
 		}
-		if(quest[0] == 'b') {
-			recv(client_socket, pid, sizeof(pid), 0);
-			b_tids(&client_socket, pid[0]);
-		}
-		/* Close(client) */
-		close(client_socket);
-
 	}
-
 	/* Close(server) , but never get here because of the loop */
 	close(connection_socket);
-
 }
 
 void a_all_pids(int *client_socket)
@@ -116,6 +130,7 @@ void a_all_pids(int *client_socket)
 	int isPID = 0;
 	int i = 0, j = 0;
 	char name[BUFFER_SIZE];
+	char end[1] = "\0";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -132,10 +147,10 @@ void a_all_pids(int *client_socket)
 				j++;
 			}
 		}
+		send(*client_socket, end, BUFFER_SIZE, 0);
 		closedir(d);
 	}
 }
-
 
 void b_tids(int *client_socket, int pid)
 {
@@ -147,11 +162,11 @@ void b_tids(int *client_socket, int pid)
 	sprintf(pid_path, "%d", pid);
 	strcat(path, pid_path);
 	strcat(path, "/task/");
-	printf("%s", path);
 	d = opendir(path);
 	int isTID = 0;
 	int i = 0, j = 0;
 	char name[BUFFER_SIZE];
+	char end[1] = "\0";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -168,6 +183,73 @@ void b_tids(int *client_socket, int pid)
 				j++;
 			}
 		}
+		send(*client_socket, end, BUFFER_SIZE, 0);
 		closedir(d);
 	}
+}
+void d_process_name(int *client_socket, int pid)
+{
+	char pname[BUFFER_SIZE];
+	char end[1] = "\0";
+	parse_status(pid, "Name:",pname);
+	send(*client_socket, pname, BUFFER_SIZE, 0);
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
+void e_state(int *client_socket, int pid)
+{
+	char state[BUFFER_SIZE];
+	char end[1] = "\0";
+	parse_status(pid, "State:",state);
+	send(*client_socket, state, BUFFER_SIZE, 0);
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
+void g_parent_pid(int *client_socket, int pid)
+{
+	char ppid[BUFFER_SIZE];
+	char end[1] = "\0";
+	parse_status(pid, "PPid:",ppid);
+	send(*client_socket, ppid, BUFFER_SIZE, 0);
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
+void i_Vmsize(int *client_socket, int pid)
+{
+	char vmsize[BUFFER_SIZE];
+	char end[1] = "\0";
+	parse_status(pid, "VmSize:",vmsize);
+	strcat(vmsize, " kB");
+	send(*client_socket, vmsize, BUFFER_SIZE, 0);
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
+void j_VmRSS(int *client_socket, int pid)
+{
+	char vmrss[BUFFER_SIZE];
+	char end[1] = "\0";
+	parse_status(pid, "VmRSS:",vmrss);
+	strcat(vmrss, " kB");
+	send(*client_socket, vmrss, BUFFER_SIZE, 0);
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
+void parse_status(int pid, char *substr, char *out)
+{
+	char path[BUFFER_SIZE] = "/proc/\0";
+	char pid_path[BUFFER_SIZE];
+	sprintf(pid_path, "%d", pid);
+	strcat(path, pid_path);
+	strcat(path, "/status");
+	FILE *fp;
+	char buffer[BUFFER_SIZE];
+	fp = fopen(path, "r");
+	if(fp==NULL) {
+		printf("Open file failed!\n");
+		exit(1);
+	}
+	while(fgets(buffer,BUFFER_SIZE,fp) != NULL) {
+		if(strstr(buffer, substr)!=NULL) {
+			char *temp;
+			strtok(buffer, "\t");
+			temp = strtok(NULL, " ");
+			strcpy(out, temp);
+		}
+	}
+	fclose(fp);
 }
