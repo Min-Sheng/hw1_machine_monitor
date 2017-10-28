@@ -90,6 +90,14 @@ int main(int argc, char **argv)
 					printf("\n");
 					printf("[State] ");
 				}
+			} else if(quest[0] == 'f') {
+				send(client_socket, quest, sizeof(quest), 0);
+				printf("pid? ");
+				if(scanf("%d",&pid[0]) == 1) {
+					send(client_socket, pid, sizeof(pid), 0);
+					printf("\n");
+					printf("[cmdline] ");
+				}
 			} else if(quest[0] == 'g') {
 				send(client_socket, quest, sizeof(quest), 0);
 				printf("pid? ");
