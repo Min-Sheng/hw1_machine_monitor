@@ -102,6 +102,9 @@ void socket_server()
 			} else if(quest[0] == 'e') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				e_state(&client_socket, pid[0]);
+			} else if(quest[0] == 'f') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				f_cmdline(&client_socket, pid[0]);
 			} else if(quest[0] == 'g') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				g_parent_pid(&client_socket, pid[0]);
@@ -203,6 +206,41 @@ void e_state(int *client_socket, int pid)
 	send(*client_socket, state, BUFFER_SIZE, 0);
 	send(*client_socket, end, BUFFER_SIZE, 0);
 }
+void f_cmdline(int *client_socket, int pid)
+{
+	char path[BUFFER_SIZE] = "/proc/\0";
+	char pid_path[BUFFER_SIZE];
+	sprintf(pid_path, "%d", pid);
+	strcat(path, pid_path);
+	strcat(path, "/cmdline");
+	FILE *fp;
+	char cmdline[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE];
+	char end[1] = "\0";
+	int no_cmdline = 1;
+	fp = fopen(path, "r");
+	if (fp == NULL) {
+		no_cmdline = 0;
+		strcpy(cmdline, "No such pid or fail to open file!");
+		send(*client_socket, cmdline, BUFFER_SIZE, 0);
+	} else {
+		while(1) {
+			if(fgets(buffer,BUFFER_SIZE,fp) == NULL) {
+				break;
+			} else {
+				no_cmdline = 0;
+				strcpy(cmdline, buffer);
+				send(*client_socket, cmdline, BUFFER_SIZE, 0);
+			}
+		}
+		fclose(fp);
+	}
+	if(no_cmdline==1) {
+		strcpy(cmdline, "No cmdline.");
+		send(*client_socket, cmdline, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, end, BUFFER_SIZE, 0);
+}
 void g_parent_pid(int *client_socket, int pid)
 {
 	char ppid[BUFFER_SIZE];
@@ -240,16 +278,16 @@ void parse_status(int pid, char *substr, char *out)
 	char buffer[BUFFER_SIZE];
 	fp = fopen(path, "r");
 	if(fp==NULL) {
-		printf("Open file failed!\n");
-		exit(1);
-	}
-	while(fgets(buffer,BUFFER_SIZE,fp) != NULL) {
-		if(strstr(buffer, substr)!=NULL) {
-			char *temp;
-			strtok(buffer, "\t");
-			temp = strtok(NULL, " ");
-			strcpy(out, temp);
+		strcpy(out, "Open file failed!");
+	} else {
+		while(fgets(buffer,BUFFER_SIZE,fp) != NULL) {
+			if(strstr(buffer, substr)!=NULL) {
+				char *temp;
+				strtok(buffer, "\t");
+				temp = strtok(NULL, " ");
+				strcpy(out, temp);
+			}
 		}
+		fclose(fp);
 	}
-	fclose(fp);
 }
