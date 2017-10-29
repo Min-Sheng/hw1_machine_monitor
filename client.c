@@ -63,6 +63,7 @@ int main(int argc, char **argv)
 		if(scanf("%s",quest) == 1) {
 			if (quest[0] == 'a') {
 				send(client_socket,quest,sizeof(quest),0);
+				printf("[pid] ");
 				printf("\n");
 			} else if (quest[0] == 'b') {
 				send(client_socket, quest, sizeof(quest), 0);
@@ -73,6 +74,15 @@ int main(int argc, char **argv)
 					printf("[tid] ");
 				} else {
 					printf("Failed.\n");
+				}
+			} else if(quest[0] == 'c') {
+				send(client_socket, quest, sizeof(quest), 0);
+				printf("pid? ");
+				if(scanf("%d",&pid[0]) == 1) {
+					send(client_socket, pid, sizeof(pid), 0);
+					printf("\n");
+					printf("[Children's pid] ");
+					printf("\n");
 				}
 			} else if(quest[0] == 'd') {
 				send(client_socket, quest, sizeof(quest), 0);
@@ -106,6 +116,15 @@ int main(int argc, char **argv)
 					printf("\n");
 					printf("[ppid] ");
 				}
+			} else if(quest[0] == 'h') {
+				send(client_socket, quest, sizeof(quest), 0);
+				printf("pid? ");
+				if(scanf("%d",&pid[0]) == 1) {
+					send(client_socket, pid, sizeof(pid), 0);
+					printf("\n");
+					printf("[Ancient's pids] ");
+					printf("\n");
+				}
 			} else if(quest[0] == 'i') {
 				send(client_socket, quest, sizeof(quest), 0);
 				printf("pid? ");
@@ -128,9 +147,11 @@ int main(int argc, char **argv)
 				break;
 			} else {
 				printf("Please enter the correct character.\n");
+				break;
 			}
 		} else {
 			printf("Failed.\n");
+			break;
 		}
 		/* Receive ans from the server and print to screen */
 		memset(&ans, 0, BUFFER_SIZE);
