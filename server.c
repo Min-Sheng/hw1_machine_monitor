@@ -96,6 +96,9 @@ void socket_server()
 			} else if(quest[0] == 'b') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				b_tids(&client_socket, pid[0]);
+			} else if(quest[0] == 'c') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				c_child_pids(&client_socket, pid[0]);
 			} else if(quest[0] == 'd') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				d_process_name(&client_socket, pid[0]);
@@ -108,6 +111,9 @@ void socket_server()
 			} else if(quest[0] == 'g') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				g_parent_pid(&client_socket, pid[0]);
+			} else if(quest[0] == 'h') {
+				recv(client_socket, pid, sizeof(pid), 0);
+				h_all_ancients_of_pid(&client_socket, pid[0]);
 			} else if(quest[0] == 'i') {
 				recv(client_socket, pid, sizeof(pid), 0);
 				i_Vmsize(&client_socket, pid[0]);
@@ -131,9 +137,8 @@ void a_all_pids(int *client_socket)
 	struct dirent *dir;
 	d = opendir("/proc/");
 	int isPID = 0;
-	int i = 0, j = 0;
+	int i = 0;
 	char name[BUFFER_SIZE];
-	char end[1] = "\0";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -147,12 +152,11 @@ void a_all_pids(int *client_socket)
 			}
 			if (isPID == 1) {
 				send(*client_socket, name, BUFFER_SIZE, 0);
-				j++;
 			}
 		}
-		send(*client_socket, end, BUFFER_SIZE, 0);
 		closedir(d);
 	}
+	send(*client_socket, "\0", 1, 0);
 }
 
 void b_tids(int *client_socket, int pid)
@@ -167,9 +171,8 @@ void b_tids(int *client_socket, int pid)
 	strcat(path, "/task/");
 	d = opendir(path);
 	int isTID = 0;
-	int i = 0, j = 0;
+	int i = 0;
 	char name[BUFFER_SIZE];
-	char end[1] = "\0";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -183,29 +186,79 @@ void b_tids(int *client_socket, int pid)
 			}
 			if (isTID == 1) {
 				send(*client_socket, name, BUFFER_SIZE, 0);
-				j++;
 			}
 		}
-		send(*client_socket, end, BUFFER_SIZE, 0);
 		closedir(d);
+	} else {
+		strcpy(name,"No such pid.");
+		send(*client_socket, name, BUFFER_SIZE, 0);
 	}
+	send(*client_socket, "\0", 1, 0);
 }
+
+void c_child_pids(int *client_socket, int pid)
+{
+	DIR           *d;
+	struct dirent *dir;
+	d = opendir("/proc/");
+	char ppid[BUFFER_SIZE];
+	sprintf(ppid, "%d", pid);
+	int isPID = 0;
+	int i = 0;
+	char cpid[BUFFER_SIZE];
+	char name[BUFFER_SIZE];
+	if (d) {
+		while ((dir = readdir(d)) != NULL) {
+			strcpy(cpid, dir->d_name);
+			while (i < strlen(cpid)) {
+				if(cpid[i] > 57 || cpid[i] < 48) {
+					isPID = 0;
+					break;
+				} else
+					isPID = 1;
+				i++;
+			}
+			if (isPID == 1) {
+				parse_status(atoi(cpid), "PPid:", name);
+				if (!strcmp(name, ppid)) {
+					send(*client_socket, cpid, BUFFER_SIZE, 0);
+				}
+			}
+		}
+		closedir(d);
+	} else {
+		strcpy(name,"No such pid.");
+		send(*client_socket, name, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
+}
+
 void d_process_name(int *client_socket, int pid)
 {
 	char pname[BUFFER_SIZE];
-	char end[1] = "\0";
 	parse_status(pid, "Name:",pname);
-	send(*client_socket, pname, BUFFER_SIZE, 0);
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	if( *pname=='\0' ) {
+		strcpy(pname, "No such pid.");
+		send(*client_socket, pname, BUFFER_SIZE, 0);
+	} else {
+		send(*client_socket, pname, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
 }
+
 void e_state(int *client_socket, int pid)
 {
 	char state[BUFFER_SIZE];
-	char end[1] = "\0";
 	parse_status(pid, "State:",state);
-	send(*client_socket, state, BUFFER_SIZE, 0);
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	if( *state=='\0' ) {
+		strcpy(state, "No such pid.");
+		send(*client_socket, state, BUFFER_SIZE, 0);
+	} else {
+		send(*client_socket, state, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
 }
+
 void f_cmdline(int *client_socket, int pid)
 {
 	char path[BUFFER_SIZE] = "/proc/\0";
@@ -216,12 +269,11 @@ void f_cmdline(int *client_socket, int pid)
 	FILE *fp;
 	char cmdline[BUFFER_SIZE];
 	char buffer[BUFFER_SIZE];
-	char end[1] = "\0";
 	int no_cmdline = 1;
 	fp = fopen(path, "r");
 	if (fp == NULL) {
 		no_cmdline = 0;
-		strcpy(cmdline, "No such pid or fail to open file!");
+		strcpy(cmdline, "No such pid.");
 		send(*client_socket, cmdline, BUFFER_SIZE, 0);
 	} else {
 		while(1) {
@@ -236,37 +288,75 @@ void f_cmdline(int *client_socket, int pid)
 		fclose(fp);
 	}
 	if(no_cmdline==1) {
-		strcpy(cmdline, "No cmdline.");
+		strcpy(cmdline, " \n         (No cmdline.)");
 		send(*client_socket, cmdline, BUFFER_SIZE, 0);
 	}
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	send(*client_socket, "\0", 1, 0);
 }
+
 void g_parent_pid(int *client_socket, int pid)
 {
 	char ppid[BUFFER_SIZE];
-	char end[1] = "\0";
 	parse_status(pid, "PPid:",ppid);
-	send(*client_socket, ppid, BUFFER_SIZE, 0);
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	if( *ppid=='\0' ) {
+		strcpy(ppid, "No such pid.");
+		send(*client_socket, ppid, BUFFER_SIZE, 0);
+	} else {
+		send(*client_socket, ppid, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
 }
+
+void h_all_ancients_of_pid(int *client_socket, int pid)
+{
+	char apid[BUFFER_SIZE];
+	char out[BUFFER_SIZE];
+	while (1) {
+		parse_status(pid, "PPid:", apid);
+		if( *apid=='\0' ) {
+			strcpy(apid, "No such pid.");
+			send(*client_socket, apid, BUFFER_SIZE, 0);
+			break;
+		} else {
+			strcpy(out, "->");
+			strcat(out, apid);
+			send(*client_socket, out, BUFFER_SIZE, 0);
+		}
+		if (atoi(apid)==0)
+			break;
+		pid = atoi(apid);
+	}
+	send(*client_socket, "\0", 1, 0);
+}
+
 void i_Vmsize(int *client_socket, int pid)
 {
 	char vmsize[BUFFER_SIZE];
-	char end[1] = "\0";
 	parse_status(pid, "VmSize:",vmsize);
-	strcat(vmsize, " kB");
-	send(*client_socket, vmsize, BUFFER_SIZE, 0);
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	if( *vmsize=='\0' ) {
+		strcpy(vmsize, "No such pid.");
+		send(*client_socket, vmsize, BUFFER_SIZE, 0);
+	} else {
+		strcat(vmsize, " kB");
+		send(*client_socket, vmsize, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
 }
+
 void j_VmRSS(int *client_socket, int pid)
 {
 	char vmrss[BUFFER_SIZE];
-	char end[1] = "\0";
 	parse_status(pid, "VmRSS:",vmrss);
-	strcat(vmrss, " kB");
-	send(*client_socket, vmrss, BUFFER_SIZE, 0);
-	send(*client_socket, end, BUFFER_SIZE, 0);
+	if( *vmrss=='\0' ) {
+		strcpy(vmrss, "No such pid.");
+		send(*client_socket, vmrss, BUFFER_SIZE, 0);
+	} else {
+		strcat(vmrss, " kB");
+		send(*client_socket, vmrss, BUFFER_SIZE, 0);
+	}
+	send(*client_socket, "\0", 1, 0);
 }
+
 void parse_status(int pid, char *substr, char *out)
 {
 	char path[BUFFER_SIZE] = "/proc/\0";
@@ -278,13 +368,14 @@ void parse_status(int pid, char *substr, char *out)
 	char buffer[BUFFER_SIZE];
 	fp = fopen(path, "r");
 	if(fp==NULL) {
-		strcpy(out, "Open file failed!");
+		strcpy(out, "\0");
 	} else {
 		while(fgets(buffer,BUFFER_SIZE,fp) != NULL) {
 			if(strstr(buffer, substr)!=NULL) {
 				char *temp;
 				strtok(buffer, "\t");
 				temp = strtok(NULL, " ");
+				strtok(temp, "\n");
 				strcpy(out, temp);
 			}
 		}
