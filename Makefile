@@ -1,8 +1,9 @@
 #!/bin/bash
 
-CC= gcc -std=c99
+CC= gcc -std=gnu99
 CCFLAGS= -Wall
 OPTIMIZE= -O3
+LIBS= -pthread
 
 SERVER= server
 CLIENT= client
@@ -19,15 +20,15 @@ $(GIT_HOOKS):
 	@echo
 
 target:
-	$(CC) -o $(SERVER) $(CCFLAGS) $(OPTIMIZE) $(TARGET_SERVER)
+	$(CC) -o $(SERVER) $(CCFLAGS) $(OPTIMIZE) $(TARGET_SERVER) $(LIBS)
 	$(CC) -o $(CLIENT) $(CCFLAGS) $(OPTIMIZE) $(TARGET_CLIENT)
 
 debug:
-	$(CC) -o $(SERVER) $(CCFLAGS) -g $(TARGET_SERVER)
+	$(CC) -o $(SERVER) $(CCFLAGS) -g $(TARGET_SERVER) $(LIBS)
 	$(CC) -o $(CLIENT) $(CCFLAGS) -g $(TARGET_CLIENT)
 
 prof:
-	$(CC) -o $(SERVER) $(CCFLAGS) -g -pg $(TARGET_SERVER)
+	$(CC) -o $(SERVER) $(CCFLAGS) -g -pg $(TARGET_SERVER) $(LIBS)
 	$(CC) -o $(CLIENT) $(CCFLAGS) -g -pg $(TARGET_CLIENT)
 
 clean:
