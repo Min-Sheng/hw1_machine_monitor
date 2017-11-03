@@ -1,39 +1,49 @@
+/*************************************************
+		Class  : OS
+		Project: Hw1_machine_monitor
+		Author : Min-Sheng Wu
+*************************************************/
+
 #include "client.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/un.h>
 #include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <netdb.h>
 
 int main(int argc, char **argv)
 {
-	struct sockaddr_in client_addr;
-	int client_socket;
+	struct addrinfo hints, *res;
+	int socketfd;
 	int ret;
 	char quest[1];
 	int pid[1];
 	char ans[BUFFER_SIZE];
 
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;// Use IPv4 or IPv6, whichever
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;// Auto fill in my IP for me
+
+	getaddrinfo(NULL, SERVER_PORT, &hints, &res);
+
 	/* Create socket */
-	client_socket = socket(PF_INET, SOCK_STREAM, 0);
-	if (client_socket == -1) {
+	socketfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+
+	if (socketfd == -1) {
 		perror("socket");
 		exit(EXIT_FAILURE);
 	}
 
-	/* Initialize value in client_addr */
-	memset(&client_addr, 0, sizeof(struct sockaddr_in));
-	client_addr.sin_family = AF_INET;
-	client_addr.sin_port = htons(SERVER_PORT);
-	client_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	/* No wait time to reuse the socket*/
+	int reeuseaddr = 1;
+	setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reeuseaddr,
+	           sizeof(reeuseaddr));
 
-	printf("Linking to server...\n");
 	/* Connecting to server */
-	ret = connect(client_socket, (struct sockaddr*)&client_addr,
-	              sizeof(struct sockaddr_in));
+	printf("Connecting to server...\n");
+	ret = connect(socketfd, res->ai_addr, res->ai_addrlen);
 	if (ret == -1) {
 		fprintf(stderr, "The server is down.\n");
 		exit(EXIT_FAILURE);
@@ -62,87 +72,87 @@ int main(int argc, char **argv)
 		memset(&pid, 0, 1);
 		if(scanf("%s",quest) == 1) {
 			if (quest[0] == 'a') {
-				send(client_socket,quest,sizeof(quest),0);
+				send(socketfd,quest,sizeof(quest),0);
 				printf("[pid] ");
 				printf("\n");
 			} else if (quest[0] == 'b') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[tid] ");
 				} else {
 					printf("Failed.\n");
 				}
 			} else if(quest[0] == 'c') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[Children's pid] ");
 					printf("\n");
 				}
 			} else if(quest[0] == 'd') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[Name] ");
 				}
 			} else if(quest[0] == 'e') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[State] ");
 				}
 			} else if(quest[0] == 'f') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[cmdline] ");
 				}
 			} else if(quest[0] == 'g') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[ppid] ");
 				}
 			} else if(quest[0] == 'h') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[Ancient's pids] ");
 					printf("\n");
 				}
 			} else if(quest[0] == 'i') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[Vmsize] ");
 				}
 			} else if(quest[0] == 'j') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("pid? ");
 				if(scanf("%d",&pid[0]) == 1) {
-					send(client_socket, pid, sizeof(pid), 0);
+					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[VmRSS] ");
 				}
 			} else if(quest[0] == 'k') {
-				send(client_socket, quest, sizeof(quest), 0);
+				send(socketfd, quest, sizeof(quest), 0);
 				printf("The client exited.\n");
 				break;
 			} else {
@@ -157,7 +167,7 @@ int main(int argc, char **argv)
 		memset(&ans, 0, BUFFER_SIZE);
 
 		while(1) {
-			recv(client_socket, ans, sizeof(ans), 0);
+			recv(socketfd, ans, sizeof(ans), 0);
 			if (ans[0]=='\0') {
 				break;
 			}
@@ -165,7 +175,7 @@ int main(int argc, char **argv)
 		}
 	}
 	/* Close connection */
-	close(client_socket);
+	close(socketfd);
 
 	return 0;
 }
