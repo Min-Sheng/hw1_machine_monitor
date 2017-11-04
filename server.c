@@ -190,7 +190,7 @@ void a_all_pids(int *new_fd)
 	d = opendir("/proc/");
 	int isPID = 0;
 	int i = 0;
-	char name[BUFFER_SIZE];
+	char name[BUFFER_SIZE]="";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -217,14 +217,14 @@ void b_tids(int *new_fd, int pid)
 	DIR           *d;
 	struct dirent *dir;
 	char path[BUFFER_SIZE] = "/proc/\0";
-	char pid_path[BUFFER_SIZE];
+	char pid_path[BUFFER_SIZE]="";
 	sprintf(pid_path, "%d", pid);
 	strcat(path, pid_path);
 	strcat(path, "/task/");
 	d = opendir(path);
 	int isTID = 0;
 	int i = 0;
-	char name[BUFFER_SIZE];
+	char name[BUFFER_SIZE]="";
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(name, dir->d_name);
@@ -257,8 +257,9 @@ void c_child_pids(int *new_fd, int pid)
 	sprintf(ppid, "%d", pid);
 	int isPID = 0;
 	int i = 0;
-	char cpid[BUFFER_SIZE];
-	char name[BUFFER_SIZE];
+	char cpid[BUFFER_SIZE]="";
+	char name[BUFFER_SIZE]="";
+	int cpid_exist=0;
 	if (d) {
 		while ((dir = readdir(d)) != NULL) {
 			strcpy(cpid, dir->d_name);
@@ -273,9 +274,14 @@ void c_child_pids(int *new_fd, int pid)
 			if (isPID == 1) {
 				parse_status(atoi(cpid), "PPid:", name);
 				if (!strcmp(name, ppid)) {
+					cpid_exist=1;
 					send(*new_fd, cpid, BUFFER_SIZE, 0);
 				}
 			}
+		}
+		if(cpid_exist==0) {
+			strcpy(name,"No child pid.");
+			send(*new_fd, name, BUFFER_SIZE, 0);
 		}
 		closedir(d);
 	} else {
@@ -287,7 +293,7 @@ void c_child_pids(int *new_fd, int pid)
 
 void d_process_name(int *new_fd, int pid)
 {
-	char pname[BUFFER_SIZE];
+	char pname[BUFFER_SIZE]="";
 	parse_status(pid, "Name:",pname);
 	if( *pname=='\0' ) {
 		strcpy(pname, "No such pid.");
@@ -300,7 +306,7 @@ void d_process_name(int *new_fd, int pid)
 
 void e_state(int *new_fd, int pid)
 {
-	char state[BUFFER_SIZE];
+	char state[BUFFER_SIZE]="";
 	parse_status(pid, "State:",state);
 	if( *state=='\0' ) {
 		strcpy(state, "No such pid.");
@@ -319,8 +325,8 @@ void f_cmdline(int *new_fd, int pid)
 	strcat(path, pid_path);
 	strcat(path, "/cmdline");
 	FILE *fp;
-	char cmdline[BUFFER_SIZE];
-	char buffer[BUFFER_SIZE];
+	char cmdline[BUFFER_SIZE]="";
+	char buffer[BUFFER_SIZE]="";
 	int no_cmdline = 1;
 	fp = fopen(path, "r");
 	if (fp == NULL) {
@@ -340,7 +346,7 @@ void f_cmdline(int *new_fd, int pid)
 		fclose(fp);
 	}
 	if(no_cmdline==1) {
-		strcpy(cmdline, " \n         (No cmdline.)");
+		strcpy(cmdline, "No cmdline.");
 		send(*new_fd, cmdline, BUFFER_SIZE, 0);
 	}
 	send(*new_fd, "\0", 1, 0);
@@ -348,7 +354,7 @@ void f_cmdline(int *new_fd, int pid)
 
 void g_parent_pid(int *new_fd, int pid)
 {
-	char ppid[BUFFER_SIZE];
+	char ppid[BUFFER_SIZE]="";
 	parse_status(pid, "PPid:",ppid);
 	if( *ppid=='\0' ) {
 		strcpy(ppid, "No such pid.");
@@ -361,8 +367,8 @@ void g_parent_pid(int *new_fd, int pid)
 
 void h_all_ancients_of_pid(int *new_fd, int pid)
 {
-	char apid[BUFFER_SIZE];
-	char out[BUFFER_SIZE];
+	char apid[BUFFER_SIZE]="";
+	char out[BUFFER_SIZE]="";
 	while (1) {
 		parse_status(pid, "PPid:", apid);
 		if( *apid=='\0' ) {
@@ -383,10 +389,13 @@ void h_all_ancients_of_pid(int *new_fd, int pid)
 
 void i_Vmsize(int *new_fd, int pid)
 {
-	char vmsize[BUFFER_SIZE];
+	char vmsize[BUFFER_SIZE]="";
 	parse_status(pid, "VmSize:",vmsize);
 	if( *vmsize=='\0' ) {
 		strcpy(vmsize, "No such pid.");
+		send(*new_fd, vmsize, BUFFER_SIZE, 0);
+	} else if(*vmsize==' ') {
+		strcat(vmsize, "No VmSize.");
 		send(*new_fd, vmsize, BUFFER_SIZE, 0);
 	} else {
 		strcat(vmsize, " kB");
@@ -397,10 +406,13 @@ void i_Vmsize(int *new_fd, int pid)
 
 void j_VmRSS(int *new_fd, int pid)
 {
-	char vmrss[BUFFER_SIZE];
+	char vmrss[BUFFER_SIZE]="";
 	parse_status(pid, "VmRSS:",vmrss);
 	if( *vmrss=='\0' ) {
 		strcpy(vmrss, "No such pid.");
+		send(*new_fd, vmrss, BUFFER_SIZE, 0);
+	} else if(*vmrss==' ') {
+		strcat(vmrss, "No VmRSS.");
 		send(*new_fd, vmrss, BUFFER_SIZE, 0);
 	} else {
 		strcat(vmrss, " kB");
@@ -417,19 +429,26 @@ void parse_status(int pid, char *substr, char *out)
 	strcat(path, pid_path);
 	strcat(path, "/status");
 	FILE *fp;
-	char buffer[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE]="";
 	fp = fopen(path, "r");
+	int str_exist=0;
 	if(fp==NULL) {
 		strcpy(out, "\0");
 	} else {
 		while(fgets(buffer,BUFFER_SIZE,fp) != NULL) {
 			if(strstr(buffer, substr)!=NULL) {
-				char *temp;
-				strtok(buffer, "\t");
-				temp = strtok(NULL, " ");
-				strtok(temp, "\n");
-				strcpy(out, temp);
+				if(buffer[0]!='\0') {
+					str_exist=1;
+					char *temp;
+					strtok(buffer, "\t");
+					temp = strtok(NULL, " ");
+					strtok(temp, "\n");
+					strcpy(out, temp);
+				}
 			}
+		}
+		if(str_exist==0) {
+			strcpy(out, " ");
 		}
 		fclose(fp);
 	}
