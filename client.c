@@ -82,6 +82,7 @@ int main(int argc, char **argv)
 					send(socketfd, pid, sizeof(pid), 0);
 					printf("\n");
 					printf("[tid] ");
+					printf("\n");
 				} else {
 					printf("Failed.\n");
 				}
