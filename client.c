@@ -177,6 +177,6 @@ int main(int argc, char **argv)
 	}
 	/* Close connection */
 	close(socketfd);
-
+	freeaddrinfo(res);
 	return 0;
 }
