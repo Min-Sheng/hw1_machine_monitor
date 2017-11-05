@@ -50,6 +50,7 @@ void socket_server()
 	int result;
 	fd_set readfds, testfds;
 	pthread_t thread_a;
+	pthread_attr_t attr;
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;// Use IPv4 or IPv6, whichever
@@ -89,6 +90,10 @@ void socket_server()
 	FD_ZERO(&readfds);
 	FD_SET(socketfd, &readfds);
 
+	pthread_attr_init(&attr);
+	pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+	pthread_attr_setschedpolicy(&attr, SCHED_OTHER);
+
 	printf("server waiting\n");
 	while(1) {
 		int fd;
@@ -116,14 +121,14 @@ void socket_server()
 
 					FD_SET(new_fd, &readfds);
 					printf("add client fd %d \n", new_fd);
-					pthread_create(&thread_a, NULL, thread_function, (void *)(intptr_t)new_fd);
+					pthread_create(&thread_a, &attr, thread_function, (void *)(intptr_t)new_fd);
 				}
 			}
 		}
 	}
-	freeaddrinfo(res);
 	/* Close(server) , but never get here because of the loop */
 	close(socketfd);
+	freeaddrinfo(res);
 }
 
 /* Thread to handle the client fd */
